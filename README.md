@@ -177,6 +177,27 @@ The log shows `"task_critical": true, "proposed_linear_x": 0.045,
 "enforced_linear_x": 0.0` — the rule engine still proposed movement,
 but the envelope forced it to zero, regardless of the emotion.
 
+### Actual output from a live run
+
+The three states, straight from `policy_engine`'s audit log on a real
+headless run (timestamps trimmed for readability):
+
+```json
+// idle / calm
+{"stage": "policy_decision", "fused_label": "neutral", "task_critical": false, "proposed_linear_x": 0.15,  "enforced_linear_x": 0.15, "face_pattern": "neutral"}
+
+// after publishing emotion "anger" -> high stress: slower + concerned face
+{"stage": "policy_decision", "fused_label": "anger",   "task_critical": false, "proposed_linear_x": 0.045, "enforced_linear_x": 0.045, "face_pattern": "concerned"}
+
+// during a critical task -> safety envelope forces movement to zero,
+// even though the rule engine still proposed 0.045 for "anger"
+{"stage": "policy_decision", "fused_label": "anger",   "task_critical": true,  "proposed_linear_x": 0.045, "enforced_linear_x": 0.0,  "face_pattern": "concerned"}
+```
+
+The `proposed_linear_x` vs. `enforced_linear_x` split in that last line
+is the whole point of the safety envelope: what the rules wanted vs.
+what the robot was actually allowed to do.
+
 **Verified end-to-end.** All three transitions above were run live on a
 headless Ubuntu 24.04 server (`docker compose up --build`, no GUI):
 calm → 0.15, `anger` → 0.045, and `critical` task → 0.0 all reproduced
