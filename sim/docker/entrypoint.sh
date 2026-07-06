@@ -7,14 +7,17 @@ source /workspace/install/setup.bash
 # turtlebot3_gazebo's stock launch file may try to start a GUI client
 # (gzclient) regardless of whether one is wanted. On a headless host
 # (no DISPLAY passed in - the default, see docker-compose.yml), that
-# would otherwise fail to connect to an X server. Xvfb gives it a
-# virtual display to render into instead, so headless `docker compose
-# up` doesn't depend on guessing turtlebot3_gazebo's exact headless
-# launch argument (unverified in this repo - see README's "Known
-# limitation"). If DISPLAY is already set (real X11 forwarding
+# would otherwise fail to connect to an X server. Start a virtual
+# display directly instead of via xvfb-run: Xvfb itself was confirmed
+# to start fine, but xvfb-run's own wrapper script was observed (on a
+# real headless server) to hang indefinitely without ever exec'ing the
+# wrapped command - root cause not chased down further, the wrapper is
+# just not used. If DISPLAY is already set (real X11 forwarding
 # enabled), this is skipped and the real display is used untouched.
 if [ -z "$DISPLAY" ]; then
-    exec xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" "$@"
-else
-    exec "$@"
+    Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp &
+    export DISPLAY=:99
+    sleep 2
 fi
+
+exec "$@"
