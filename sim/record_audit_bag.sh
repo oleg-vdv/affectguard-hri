@@ -6,6 +6,15 @@
 #   docker compose exec sim /workspace/sim/record_audit_bag.sh
 set -euo pipefail
 
+# Self-sourcing: `docker compose exec` doesn't go through the image's
+# ENTRYPOINT, so `ros2` wouldn't otherwise be on PATH here.
+if [ -f /opt/ros/jazzy/setup.sh ]; then
+    # shellcheck disable=SC1091
+    source /opt/ros/jazzy/setup.sh
+    # shellcheck disable=SC1091
+    source /workspace/install/setup.bash
+fi
+
 OUT_DIR="${1:-audit_bag_$(date +%Y%m%d_%H%M%S)}"
 
 exec ros2 bag record -o "$OUT_DIR" \

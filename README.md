@@ -135,24 +135,27 @@ runs `sim/launch/affectguard_sim.launch.py`, which brings up:
    `face_indicator`).
 
 Expected result: the robot drives forward in Gazebo at the "calm" speed.
-To check without a GUI: `docker compose exec sim ros2 topic echo /cmd_vel`.
+To check without a GUI: `docker compose exec sim ros-env-exec ros2 topic echo /cmd_vel`
+(`docker compose exec` bypasses the image's ROS-sourcing ENTRYPOINT,
+so plain `ros2 ...` fails with "executable file not found" without the
+`ros-env-exec` wrapper — see `sim/docker/ros_env_exec.sh`).
 
 To see the policy engine actually react, publish a fused emotion state
 by hand and watch `core/cmd` change:
 
 ```
-docker compose exec sim ros2 topic pub /fused_emotion_state interfaces/msg/EmotionState \
+docker compose exec sim ros-env-exec ros2 topic pub /fused_emotion_state interfaces/msg/EmotionState \
     "{label: 'anger', confidence: 0.9}" --once
-docker compose exec sim ros2 topic echo /core/cmd
+docker compose exec sim ros-env-exec ros2 topic echo /core/cmd
 ```
 
 And to see the safety envelope refuse to let *anything* move the robot
 during a critical task:
 
 ```
-docker compose exec sim ros2 topic pub /current_task interfaces/msg/CurrentTask \
+docker compose exec sim ros-env-exec ros2 topic pub /current_task interfaces/msg/CurrentTask \
     "{task_id: 'demo', critical: true}" --once
-docker compose exec sim ros2 topic echo /cmd_vel   # linear/angular stay at 0
+docker compose exec sim ros-env-exec ros2 topic echo /cmd_vel   # linear/angular stay at 0
 ```
 
 **Known limitation:** this was authored without a working Docker daemon
@@ -191,7 +194,7 @@ docker compose run --rm sim ros2 launch /workspace/launch/affectguard_sim.launch
 Then feed it real data — a camera driver node or `ros2 bag play` of a
 recorded dataset onto `camera/image_raw`, and an `interfaces/AudioChunk`
 publisher onto `audio_raw` — and watch `fused_emotion_state`:
-`docker compose exec sim ros2 topic echo fused_emotion_state`.
+`docker compose exec sim ros-env-exec ros2 topic echo fused_emotion_state`.
 
 ## Running Phase 4 (SROS2)
 

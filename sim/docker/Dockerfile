@@ -51,13 +51,15 @@ COPY core/ src/core/
 COPY actuation/ src/actuation/
 COPY perception/ src/perception/
 COPY sim/launch/ launch/
+COPY sim/record_audit_bag.sh sim/record_audit_bag.sh
 COPY security/ security/
 
 RUN . /opt/ros/jazzy/setup.sh \
     && colcon build --symlink-install
 
 COPY sim/docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY sim/docker/ros_env_exec.sh /usr/local/bin/ros-env-exec
+RUN chmod +x /entrypoint.sh /usr/local/bin/ros-env-exec
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["ros2", "launch", "/workspace/launch/affectguard_sim.launch.py"]

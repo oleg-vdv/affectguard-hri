@@ -33,7 +33,15 @@ without a keystore — same reasoning as `enable_perception` in Phase 2).
 Once enabled, plain unauthenticated `ros2 topic pub`/`echo` from a shell
 can no longer reach the secured domain — that's the point. Authenticate
 as the `/test_cli` enclave to run the manual verification commands from
-the root README under security:
+the root README under security. Open a shell in the container first
+(`docker compose exec` doesn't go through the image's ROS-sourcing
+ENTRYPOINT, hence `ros-env-exec`):
+
+```
+docker compose exec sim ros-env-exec bash
+```
+
+Then, inside that shell:
 
 ```
 export ROS_SECURITY_ENABLE=true

@@ -12,6 +12,17 @@
 # on any schema mistake, which is the intended way to catch one.
 set -euo pipefail
 
+# Self-sourcing: `docker compose exec` doesn't go through the image's
+# ENTRYPOINT (which sources these for the main launch process), so
+# `ros2` wouldn't otherwise be on PATH here either. Harmless if already
+# sourced.
+if [ -f /opt/ros/jazzy/setup.sh ]; then
+    # shellcheck disable=SC1091
+    source /opt/ros/jazzy/setup.sh
+    # shellcheck disable=SC1091
+    source /workspace/install/setup.bash
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KEYSTORE_DIR="${1:-$SCRIPT_DIR/keystore}"
 POLICY_FILE="$SCRIPT_DIR/policies/policy.xml"
