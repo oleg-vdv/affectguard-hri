@@ -16,6 +16,20 @@ jobs:
       - run: pip install ruff
       - run: ruff check .
 
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      # Only the pure-Python logic (perception fusion, rule engine,
+      # safety envelope) - no ROS 2 install needed. This is what makes
+      # the Phase 3 safety-envelope test an actual CI gate rather than
+      # just a file that exists in the repo.
+      - run: pytest tests/
+
   docker-build:
     runs-on: ubuntu-latest
     steps:

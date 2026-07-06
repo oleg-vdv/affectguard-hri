@@ -17,13 +17,13 @@ threat model, and an audit log of every state transition). Each is
 shipped incrementally: see the roadmap below for what exists today versus
 what's planned.
 
-This repository currently implements **Phases 1-2**: a ROS 2 skeleton
-running in Gazebo simulation (placeholder policy engine + sim actuation
-backend, wired end-to-end), plus real video/audio emotion recognition
-nodes and a fusion node publishing `fused_emotion_state`. The policy
-engine is still the Phase 1 stub — it does not yet consume
-`fused_emotion_state`, there is no rule engine, no safety envelope
-enforcement, and no SROS2 yet. Those are Phases 3 and 4.
+This repository currently implements **Phases 1-3**: a ROS 2 skeleton
+running in Gazebo simulation, real video/audio emotion recognition nodes
+feeding a fusion node (`fused_emotion_state`), and a rule-based policy
+engine with an immutable, unit-tested safety envelope that clamps or
+zeroes any movement command before it reaches actuation. There is no
+SROS2 yet — encrypted/authenticated inter-node transport and the audit
+log are Phase 4.
 
 ## Architecture (5 layers)
 
@@ -72,15 +72,16 @@ flowchart TB
     Actuation -. logs .-> Observability
 ```
 
-As of Phase 2: layers 1, 3 and 5 exist in a real form. Layer 2 is still
-the Phase 1 stub — `core/policy_engine_stub` publishes a fixed
-forward-drive command on a timer, not yet wired to
-`fused_emotion_state` — and `actuation/sim_backend` forwards it to the
-simulated robot's `/cmd_vel`. This still establishes the real topic
-boundary the later phases build on: perception and policy nodes only
-ever talk to `core/cmd`, never to `/cmd_vel` directly — that separation
-is what NFR-4 turns into an enforced SROS2 access-control policy in
-Phase 4, not just a convention.
+As of Phase 3: layers 1, 2, 3 and 5 exist in a real form. `core/policy_engine`
+turns the fused emotion label into a movement/voice/face proposal
+(`core/rule_engine.py`), which then always passes through
+`core/safety_envelope.py` before publishing on `core/cmd` — there is no
+code path that skips the envelope. `actuation/sim_backend` forwards the
+movement part to `/cmd_vel` and stands in for voice (log) and face
+(topic) per FR-3's MVP scope. Perception and policy nodes still only
+ever talk to `core/cmd`, never to `/cmd_vel` directly — Phase 4 turns
+that into an enforced SROS2 access-control policy instead of just a
+convention.
 
 ## Repository layout
 
@@ -90,7 +91,7 @@ rationale. Folders not yet populated with real code carry a short
 
 ```
 affectguard-hri/
-├── core/          # policy engine (Phase 1: stub node only)
+├── core/          # policy engine + safety envelope (Phase 3)
 ├── perception/     # emotion recognition nodes (Phase 2: video, audio, fusion)
 ├── interfaces/      # EmotionState / AudioChunk custom messages (ADR 0002)
 ├── actuation/       # sim backend (Phase 1), hardware backend (Phase 5)
@@ -103,7 +104,7 @@ affectguard-hri/
 └── README.md
 ```
 
-## Running Phase 1
+## Running Phase 1 + 3 (default)
 
 ```
 docker compose up --build
@@ -114,12 +115,33 @@ runs `sim/launch/affectguard_sim.launch.py`, which brings up:
 
 1. the stock turtlebot3 Gazebo world (unmodified demo robot, per spec —
    Phase 1 deliberately does not invent a custom robot model),
-2. `core/policy_engine_stub`, publishing a constant low-speed forward
-   command on `core/cmd` every 0.5s,
-3. `actuation/sim_backend`, forwarding `core/cmd` to `/cmd_vel`.
+2. `core/policy_engine`, which defaults to a "neutral"/non-critical
+   state until real messages arrive, and publishes the corresponding
+   (low-stress) `BehaviorCommand` on `core/cmd` every 0.5s,
+3. `actuation/sim_backend`, forwarding the movement part to `/cmd_vel`
+   (plus logging voice_text and publishing face_pattern on
+   `face_indicator`).
 
-Expected result: the robot drives forward in Gazebo. To check without a
-GUI: `docker compose exec sim ros2 topic echo /cmd_vel`.
+Expected result: the robot drives forward in Gazebo at the "calm" speed.
+To check without a GUI: `docker compose exec sim ros2 topic echo /cmd_vel`.
+
+To see the policy engine actually react, publish a fused emotion state
+by hand and watch `core/cmd` change:
+
+```
+docker compose exec sim ros2 topic pub /fused_emotion_state interfaces/msg/EmotionState \
+    "{label: 'anger', confidence: 0.9}" --once
+docker compose exec sim ros2 topic echo /core/cmd
+```
+
+And to see the safety envelope refuse to let *anything* move the robot
+during a critical task:
+
+```
+docker compose exec sim ros2 topic pub /current_task interfaces/msg/CurrentTask \
+    "{task_id: 'demo', critical: true}" --once
+docker compose exec sim ros2 topic echo /cmd_vel   # linear/angular stay at 0
+```
 
 **Known limitation:** this was built and reviewed without a working
 Docker daemon / package-index access in the authoring environment, so
@@ -161,7 +183,7 @@ container.
 |---|---|---|
 | 1 | ROS 2 skeleton + Gazebo sim, stub policy engine | **done** |
 | 2 | Perception nodes (video + audio) -> `fused_emotion_state` | **done** (models not bundled, see `docs/models.md`) |
-| 3 | Real policy engine + enforced safety envelope | not started |
+| 3 | Real policy engine + enforced safety envelope | **done** (17/17 unit tests pass, see `tests/`) |
 | 4 | SROS2 + threat model + audit log | not started |
 | 5 (optional) | Raspberry Pi 5 / Jetson Orin Nano hardware port | not started |
 

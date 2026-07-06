@@ -1,4 +1,4 @@
-"""Phase 1+2 bring-up: turtlebot3 in Gazebo + core + actuation + (optional) perception.
+"""Phase 1-3 bring-up: turtlebot3 in Gazebo + policy engine + actuation + (optional) perception.
 
 Reuses the stock turtlebot3_gazebo world/robot rather than inventing a
 custom robot model, per the spec. This assumes the turtlebot3 packages
@@ -62,8 +62,8 @@ def generate_launch_description() -> LaunchDescription:
             ),
             Node(
                 package="core",
-                executable="policy_engine_stub",
-                name="policy_engine_stub",
+                executable="policy_engine",
+                name="policy_engine",
                 output="screen",
             ),
             Node(

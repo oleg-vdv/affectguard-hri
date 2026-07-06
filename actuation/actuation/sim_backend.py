@@ -1,19 +1,29 @@
 """Gazebo sim backend for the actuation layer.
 
-Bridges the abstract `core/cmd` topic (published by core/, see
-policy_engine_stub) onto the simulated robot's `/cmd_vel`. This is the
-only node allowed to write to `/cmd_vel`: perception and policy nodes
-never touch actuation topics directly (NFR-4), they only ever publish to
-`core/cmd`, which this node translates for the concrete backend
-(simulation here, real hardware in the optional Phase 5 backend).
+Bridges the policy engine's BehaviorCommand (core/cmd) onto the
+simulated robot's concrete outputs: movement -> /cmd_vel, plus MVP
+stand-ins for the other two FR-3 sim-backend duties (voice, face):
+voice_text is logged as if spoken through TTS, and face_pattern is
+republished on a small String topic as the "текстовый/иконочный
+индикатор" the spec calls for in Phase 1 MVP - a full 3D face model is
+an explicitly allowed later upgrade, not required here.
+
+This is the only node allowed to write to /cmd_vel: perception and
+policy nodes never touch actuation topics directly (NFR-4), they only
+ever publish to core/cmd, which this node translates for the concrete
+backend (simulation here, real hardware in the optional Phase 5
+backend).
 """
 
 import rclpy
 from geometry_msgs.msg import Twist
+from interfaces.msg import BehaviorCommand
 from rclpy.node import Node
+from std_msgs.msg import String
 
 DEFAULT_INPUT_TOPIC = "core/cmd"
-DEFAULT_OUTPUT_TOPIC = "/cmd_vel"
+DEFAULT_CMD_VEL_TOPIC = "/cmd_vel"
+DEFAULT_FACE_TOPIC = "face_indicator"
 
 
 class SimBackend(Node):
@@ -21,22 +31,36 @@ class SimBackend(Node):
         super().__init__("sim_backend")
 
         self.declare_parameter("input_topic", DEFAULT_INPUT_TOPIC)
-        self.declare_parameter("output_topic", DEFAULT_OUTPUT_TOPIC)
+        self.declare_parameter("cmd_vel_topic", DEFAULT_CMD_VEL_TOPIC)
+        self.declare_parameter("face_topic", DEFAULT_FACE_TOPIC)
 
         input_topic = self.get_parameter("input_topic").get_parameter_value().string_value
-        output_topic = self.get_parameter("output_topic").get_parameter_value().string_value
+        cmd_vel_topic = self.get_parameter("cmd_vel_topic").get_parameter_value().string_value
+        face_topic = self.get_parameter("face_topic").get_parameter_value().string_value
 
-        self._publisher = self.create_publisher(Twist, output_topic, 10)
+        self._cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, 10)
+        self._face_publisher = self.create_publisher(String, face_topic, 10)
         self._subscription = self.create_subscription(
-            Twist, input_topic, self._on_cmd, 10
+            BehaviorCommand, input_topic, self._on_cmd, 10
         )
-        self.get_logger().info(f"sim_backend bridging '{input_topic}' -> '{output_topic}'")
+        self.get_logger().info(
+            f"sim_backend: '{input_topic}' -> '{cmd_vel_topic}' + '{face_topic}' (+ TTS log)"
+        )
 
-    def _on_cmd(self, msg: Twist) -> None:
-        self._publisher.publish(msg)
+    def _on_cmd(self, msg: BehaviorCommand) -> None:
+        self._cmd_vel_publisher.publish(msg.movement)
+
+        if msg.voice_text:
+            self.get_logger().info(
+                f"[sim TTS] (volume={msg.voice_volume:.2f}) \"{msg.voice_text}\""
+            )
+
+        face = String()
+        face.data = msg.face_pattern
+        self._face_publisher.publish(face)
 
 
-def main(args: list[str] | None = None) -> None:
+def main(args: list = None) -> None:
     rclpy.init(args=args)
     node = SimBackend()
     try:

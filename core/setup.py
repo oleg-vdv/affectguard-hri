@@ -16,13 +16,13 @@ setup(
     maintainer_email="ipgleg@gmail.com",
     description=(
         "Policy engine (cognitive/arbitration layer) and safety envelope. "
-        "Phase 1: stub node publishing movement commands on a timer."
+        "Phase 3: rule-based policy engine with an enforced safety envelope."
     ),
     license="MIT",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "policy_engine_stub = core.policy_engine_stub:main",
+            "policy_engine = core.policy_engine:main",
         ],
     },
 )

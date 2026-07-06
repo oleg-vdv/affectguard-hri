@@ -5,18 +5,17 @@
   <version>0.1.0</version>
   <description>
     Policy engine (cognitive/arbitration layer) and safety envelope for
-    AffectGuard-HRI. Phase 1 contains a stub node only: no emotion input
-    yet, no safety envelope yet (see roadmap phases 2-3).
+    AffectGuard-HRI. Phase 3: rule-based policy_engine node consuming
+    fused_emotion_state + current_task, with an immutable safety
+    envelope the rule engine cannot override (see core/safety_envelope.py).
   </description>
   <maintainer email="ipgleg@gmail.com">Oleg Vdovin</maintainer>
   <license>MIT</license>
 
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
+  <depend>interfaces</depend>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
   <export>
