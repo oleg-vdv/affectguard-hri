@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>actuation</name>
+  <version>0.1.0</version>
+  <description>
+    Actuation layer. Phase 1 ships only the Gazebo sim backend: it takes
+    the abstract movement command published by core/ on `core/cmd` and
+    forwards it to the simulated robot's `/cmd_vel`. A real-hardware
+    backend with the same topic interface is planned for Phase 5.
+  </description>
+  <maintainer email="ipgleg@gmail.com">AffectGuard-HRI maintainers</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

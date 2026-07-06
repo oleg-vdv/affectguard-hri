@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build sim image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: sim/docker/Dockerfile
+          push: false
+          # Cache to keep CI time reasonable given the ROS 2 + Gazebo base image size.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # TODO(Phase 4+): bring up headless Gazebo + the full launch stack in CI
+  # and assert on the resulting topics (e.g. /cmd_vel, fused_emotion_state).
+  # Left out of Phase 1 deliberately: it needs a GPU-less headless
+  # rendering setup and a bounded-time smoke test harness, which is a
+  # separate, more involved piece of work than the current lint/build gate.
