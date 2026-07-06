@@ -205,12 +205,19 @@ docker compose run --rm sim ros2 launch /workspace/launch/affectguard_sim.launch
     enable_security:=true
 ```
 
+### Headless servers
+
+No GUI needed. If `docker-compose.yml`'s `DISPLAY` lines are left
+commented out (the default), the entrypoint starts Gazebo under `Xvfb`
+(a virtual display) automatically, so a headless box doesn't depend on
+guessing turtlebot3_gazebo's own headless launch argument.
+
 ### GUI over X11 (optional)
 
-Gazebo's client needs an X11 display. On Linux: `xhost +local:docker`,
-then uncomment the `DISPLAY` environment/volume lines in
-`docker-compose.yml`. Without it, Gazebo still runs headless inside the
-container.
+Gazebo's client needs a real X11 display. On Linux: `xhost
++local:docker`, then uncomment the `DISPLAY` environment/volume lines
+in `docker-compose.yml`. When `DISPLAY` is set, the entrypoint skips
+`Xvfb` and uses the forwarded display instead.
 
 ## Running Phase 5 (optional real hardware)
 

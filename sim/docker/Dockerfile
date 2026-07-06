@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-jazzy-sros2 \
         python3-colcon-common-extensions \
         python3-pip \
+        xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Phase 4 (SROS2): DDS-Security's most consistently documented RMW
