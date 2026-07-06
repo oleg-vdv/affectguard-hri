@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SROS2 access-control policy (NFR-2, NFR-4).
+
+  The property this file exists to enforce: no perception enclave has
+  ANY permission entry for core/cmd, /cmd_vel, or face_indicator - only
+  policy_engine may publish core/cmd, and only sim_backend may publish
+  /cmd_vel and face_indicator. That is the acceptance criterion from
+  section 8 of the spec ("perception node has no technical ability to
+  call the actuation topic directly, checked via SROS2 access control
+  policy, not a code comment") and it is enforced structurally here:
+  removing a perception <topics publish="ALLOW"> block wouldn't need to
+  change for this property to hold, because those topics were never
+  listed for perception in the first place.
+
+  Caveat (same as the rest of this repo's Phase 4 work): this was
+  authored without a running ROS 2 / SROS2 toolchain to generate or
+  validate it against (see docs/decisions/0001-middleware-choice.md's
+  "Known limitation" pattern). `ros2 security create_permission` (see
+  ../generate_keystore.sh) will fail loudly on any schema mistake here -
+  that's expected to be a small, mechanical fix, not a silent gap.
+-->
+<policy version="0.2.0">
+  <enclaves>
+
+    <enclave path="/perception/video_emotion_node">
+      <profiles>
+        <profile ns="/" node="video_emotion_node">
+          <topics subscribe="ALLOW">
+            <topic>camera/image_raw</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics publish="ALLOW">
+            <topic>perception/video/emotion_state</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <enclave path="/perception/audio_emotion_node">
+      <profiles>
+        <profile ns="/" node="audio_emotion_node">
+          <topics subscribe="ALLOW">
+            <topic>audio_raw</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics publish="ALLOW">
+            <topic>perception/audio/emotion_state</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <enclave path="/perception/fusion_node">
+      <profiles>
+        <profile ns="/" node="fusion_node">
+          <topics subscribe="ALLOW">
+            <topic>perception/video/emotion_state</topic>
+            <topic>perception/audio/emotion_state</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics publish="ALLOW">
+            <topic>fused_emotion_state</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!--
+      The policy engine is the ONLY enclave allowed to publish core/cmd.
+      It may subscribe to fused_emotion_state and current_task, but has
+      no permission entry for /cmd_vel, face_indicator, camera/image_raw
+      or audio_raw - it never touches perception's inputs or
+      actuation's outputs directly, only the two abstract topics FR-2
+      specifies.
+    -->
+    <enclave path="/policy_engine">
+      <profiles>
+        <profile ns="/" node="policy_engine">
+          <topics subscribe="ALLOW">
+            <topic>fused_emotion_state</topic>
+            <topic>current_task</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics publish="ALLOW">
+            <topic>core/cmd</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!--
+      sim_backend is the ONLY enclave allowed to publish /cmd_vel and
+      face_indicator. It may subscribe only to core/cmd - it has no
+      permission entry for fused_emotion_state, current_task, or either
+      perception emotion_state topic, so it cannot be driven by
+      anything except the policy engine's already-enveloped output.
+    -->
+    <enclave path="/sim_backend">
+      <profiles>
+        <profile ns="/" node="sim_backend">
+          <topics subscribe="ALLOW">
+            <topic>core/cmd</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics publish="ALLOW">
+            <topic>/cmd_vel</topic>
+            <topic>face_indicator</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!--
+      Debug-only enclave for the manual `ros2 topic pub/echo` commands
+      in the README (publishing test fused_emotion_state/current_task,
+      observing core/cmd and /cmd_vel). NOT part of the deployed node
+      graph - once SROS2 is enabled, plain unauthenticated `ros2 topic
+      pub` from a shell can no longer reach the secured domain at all,
+      so this enclave is what a test/demo shell should authenticate as
+      instead (see ../README.md).
+    -->
+    <enclave path="/test_cli">
+      <profiles>
+        <profile ns="/" node="test_cli">
+          <topics subscribe="ALLOW">
+            <topic>core/cmd</topic>
+            <topic>/cmd_vel</topic>
+            <topic>face_indicator</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics publish="ALLOW">
+            <topic>fused_emotion_state</topic>
+            <topic>current_task</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+        </profile>
+      </profiles>
+    </enclave>
+
+  </enclaves>
+</policy>

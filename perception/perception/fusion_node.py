@@ -10,6 +10,7 @@ import rclpy
 from interfaces.msg import EmotionState
 from rclpy.node import Node
 
+from perception.audit import audit_log
 from perception.fusion_logic import Reading, fuse
 
 
@@ -63,6 +64,14 @@ class FusionNode(Node):
         fused = fuse(self._latest_video, self._latest_audio, now_sec, self._max_age_sec)
         if fused is not None:
             self._publisher.publish(_to_msg(fused, self))
+            audit_log(
+                self.get_logger(),
+                "fused_emotion",
+                label=fused.label,
+                confidence=fused.confidence,
+                video_present=self._latest_video is not None,
+                audio_present=self._latest_audio is not None,
+            )
 
 
 def main(args: list = None) -> None:

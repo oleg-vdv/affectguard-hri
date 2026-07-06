@@ -31,18 +31,28 @@ one place to avoid the two drifting apart.
    in structured JSON, plus `rosbag2` recording of the topics, so a full
    decision trace can be replayed and audited (FR-4).
 
-## Status (through Phase 3)
+## Status (through Phase 4)
 
-Layers 1, 2, 3 and 5 have real implementations; layer 4 (SROS2) is
-Phase 4. `core/policy_engine` subscribes to `fused_emotion_state` and
-`current_task`, runs `core/rule_engine.decide()` (a fused emotion
-label -> movement/voice/face proposal), and unconditionally passes the
-result through `core/safety_envelope.enforce()` before publishing on
-`core/cmd` — there is no code path in `policy_engine.py` that skips
-this. `enforce()` and `decide()` are both plain Python with no rclpy
+All 5 layers have real implementations (Phase 5 hardware is the only
+remaining, optional piece). `core/policy_engine` subscribes to
+`fused_emotion_state` and `current_task`, runs
+`core/rule_engine.decide()` (a fused emotion label -> movement/voice/
+face proposal), and unconditionally passes the result through
+`core/safety_envelope.enforce()` before publishing on `core/cmd` —
+there is no code path in `policy_engine.py` that skips this.
+`enforce()` and `decide()` are both plain Python with no rclpy
 dependency, specifically so they're unit-testable without a ROS 2
 environment (`tests/test_safety_envelope.py`,
 `tests/test_rule_engine.py`; same pattern as perception's
-`fusion_logic.py`). The topic boundary between "policy" and
-"actuation" (`core/cmd` vs `/cmd_vel`) that Phase 1 established is what
-Phase 4 turns into an enforced SROS2 access-control policy.
+`fusion_logic.py`).
+
+The topic boundary between "policy" and "actuation" (`core/cmd` vs
+`/cmd_vel`) that Phase 1 established is, as of Phase 4, an enforced
+SROS2 access-control policy (`security/policies/policy.xml`): no
+perception enclave has a permission entry for `core/cmd`, `/cmd_vel`,
+or `face_indicator`. Every node also emits one structured JSON audit
+line per state transition via its own `audit.py` module (FR-4), and
+`sim/record_audit_bag.sh` records the same topics with rosbag2. See
+`docs/threat-model.md` for how these pieces map onto the three threats
+NFR-3 requires, and `security/README.md` for what about the SROS2
+policy is verified vs. best-effort.

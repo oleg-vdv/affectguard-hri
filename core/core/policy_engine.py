@@ -12,6 +12,7 @@ import rclpy
 from interfaces.msg import BehaviorCommand, CurrentTask, EmotionState
 from rclpy.node import Node
 
+from core.audit import audit_log
 from core.rule_engine import decide
 from core.safety_envelope import Movement, enforce
 
@@ -69,6 +70,16 @@ class PolicyEngine(Node):
         out.voice_volume = behavior.voice_volume
         out.face_pattern = behavior.face_pattern
         self._publisher.publish(out)
+        audit_log(
+            self.get_logger(),
+            "policy_decision",
+            fused_label=self._latest_label,
+            task_critical=self._task_critical,
+            proposed_linear_x=behavior.linear_x,
+            enforced_linear_x=movement.linear_x,
+            enforced_angular_z=movement.angular_z,
+            face_pattern=behavior.face_pattern,
+        )
 
 
 def main(args: list = None) -> None:

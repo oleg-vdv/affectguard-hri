@@ -22,6 +22,7 @@ import rclpy
 from interfaces.msg import AudioChunk, EmotionState
 from rclpy.node import Node
 
+from perception.audit import audit_log
 from perception.logits import argmax_label, softmax
 
 DEFAULT_LABELS = [
@@ -118,6 +119,13 @@ class AudioEmotionNode(Node):
         out.label = label
         out.confidence = float(confidence)
         self._publisher.publish(out)
+        audit_log(
+            self.get_logger(),
+            "raw_emotion",
+            modality="audio",
+            label=label,
+            confidence=float(confidence),
+        )
 
 
 def main(args: list = None) -> None:

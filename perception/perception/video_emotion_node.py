@@ -25,6 +25,7 @@ from interfaces.msg import EmotionState
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
+from perception.audit import audit_log
 from perception.logits import argmax_label, softmax
 
 FER_PLUS_LABELS = [
@@ -96,6 +97,13 @@ class VideoEmotionNode(Node):
         out.label = label
         out.confidence = float(confidence)
         self._publisher.publish(out)
+        audit_log(
+            self.get_logger(),
+            "raw_emotion",
+            modality="video",
+            label=label,
+            confidence=float(confidence),
+        )
 
 
 def main(args: list = None) -> None:

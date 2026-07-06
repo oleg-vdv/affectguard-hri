@@ -21,6 +21,8 @@ from interfaces.msg import BehaviorCommand
 from rclpy.node import Node
 from std_msgs.msg import String
 
+from actuation.audit import audit_log
+
 DEFAULT_INPUT_TOPIC = "core/cmd"
 DEFAULT_CMD_VEL_TOPIC = "/cmd_vel"
 DEFAULT_FACE_TOPIC = "face_indicator"
@@ -58,6 +60,15 @@ class SimBackend(Node):
         face = String()
         face.data = msg.face_pattern
         self._face_publisher.publish(face)
+
+        audit_log(
+            self.get_logger(),
+            "actuation_command",
+            linear_x=msg.movement.linear.x,
+            angular_z=msg.movement.angular.z,
+            voice_text=msg.voice_text,
+            face_pattern=msg.face_pattern,
+        )
 
 
 def main(args: list = None) -> None:

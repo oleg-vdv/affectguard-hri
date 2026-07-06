@@ -18,6 +18,12 @@ or `ros2 bag play` of a recorded dataset) publishing on image_topic /
 audio_topic. Leaving them off by default keeps the plain
 `docker compose up` path (NFR-5) working without requiring model files
 nobody has yet.
+
+SROS2 (Phase 4) is likewise off by default (`enable_security:=false`).
+Each node gets ROS_SECURITY_ENCLAVE_OVERRIDE set to its own enclave path
+from security/policies/policy.xml regardless, but ROS_SECURITY_ENABLE
+only turns SROS2 on when the launch argument is true, after running
+security/generate_keystore.sh - see ../../security/README.md.
 """
 
 import os
@@ -47,6 +53,17 @@ def generate_launch_description() -> LaunchDescription:
     image_topic = LaunchConfiguration("image_topic")
     audio_topic = LaunchConfiguration("audio_topic")
 
+    enable_security = LaunchConfiguration("enable_security")
+    security_keystore = LaunchConfiguration("security_keystore")
+
+    def sros2_env(enclave: str) -> dict:
+        return {
+            "ROS_SECURITY_ENABLE": enable_security,
+            "ROS_SECURITY_STRATEGY": "Enforce",
+            "ROS_SECURITY_KEYSTORE": security_keystore,
+            "ROS_SECURITY_ENCLAVE_OVERRIDE": enclave,
+        }
+
     return LaunchDescription(
         [
             DeclareLaunchArgument("enable_perception", default_value="false"),
@@ -54,6 +71,10 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("audio_model_path", default_value=""),
             DeclareLaunchArgument("image_topic", default_value="camera/image_raw"),
             DeclareLaunchArgument("audio_topic", default_value="audio_raw"),
+            DeclareLaunchArgument("enable_security", default_value="false"),
+            DeclareLaunchArgument(
+                "security_keystore", default_value="/workspace/security/keystore"
+            ),
             SetEnvironmentVariable(
                 name="TURTLEBOT3_MODEL", value=os.environ.get("TURTLEBOT3_MODEL", "burger")
             ),
@@ -65,12 +86,14 @@ def generate_launch_description() -> LaunchDescription:
                 executable="policy_engine",
                 name="policy_engine",
                 output="screen",
+                additional_env=sros2_env("/policy_engine"),
             ),
             Node(
                 package="actuation",
                 executable="sim_backend",
                 name="sim_backend",
                 output="screen",
+                additional_env=sros2_env("/sim_backend"),
             ),
             Node(
                 package="perception",
@@ -79,6 +102,7 @@ def generate_launch_description() -> LaunchDescription:
                 output="screen",
                 parameters=[{"model_path": video_model_path, "image_topic": image_topic}],
                 condition=IfCondition(enable_perception),
+                additional_env=sros2_env("/perception/video_emotion_node"),
             ),
             Node(
                 package="perception",
@@ -87,6 +111,7 @@ def generate_launch_description() -> LaunchDescription:
                 output="screen",
                 parameters=[{"model_path": audio_model_path, "audio_topic": audio_topic}],
                 condition=IfCondition(enable_perception),
+                additional_env=sros2_env("/perception/audio_emotion_node"),
             ),
             Node(
                 package="perception",
@@ -94,6 +119,7 @@ def generate_launch_description() -> LaunchDescription:
                 name="fusion_node",
                 output="screen",
                 condition=IfCondition(enable_perception),
+                additional_env=sros2_env("/perception/fusion_node"),
             ),
         ]
     )

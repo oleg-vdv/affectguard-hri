@@ -17,13 +17,16 @@ threat model, and an audit log of every state transition). Each is
 shipped incrementally: see the roadmap below for what exists today versus
 what's planned.
 
-This repository currently implements **Phases 1-3**: a ROS 2 skeleton
+This repository currently implements **Phases 1-4**: a ROS 2 skeleton
 running in Gazebo simulation, real video/audio emotion recognition nodes
-feeding a fusion node (`fused_emotion_state`), and a rule-based policy
+feeding a fusion node (`fused_emotion_state`), a rule-based policy
 engine with an immutable, unit-tested safety envelope that clamps or
-zeroes any movement command before it reaches actuation. There is no
-SROS2 yet — encrypted/authenticated inter-node transport and the audit
-log are Phase 4.
+zeroes any movement command before it reaches actuation, an SROS2
+access-control policy that makes perception technically unable to reach
+actuation topics, and structured JSON audit logging of every state
+transition. See `docs/threat-model.md` for the three required threats
+and their mitigations. The optional hardware port (Phase 5) isn't done
+yet — see the roadmap.
 
 ## Architecture (5 layers)
 
@@ -72,16 +75,20 @@ flowchart TB
     Actuation -. logs .-> Observability
 ```
 
-As of Phase 3: layers 1, 2, 3 and 5 exist in a real form. `core/policy_engine`
+As of Phase 4: all 5 layers exist in a real form. `core/policy_engine`
 turns the fused emotion label into a movement/voice/face proposal
 (`core/rule_engine.py`), which then always passes through
 `core/safety_envelope.py` before publishing on `core/cmd` — there is no
 code path that skips the envelope. `actuation/sim_backend` forwards the
 movement part to `/cmd_vel` and stands in for voice (log) and face
 (topic) per FR-3's MVP scope. Perception and policy nodes still only
-ever talk to `core/cmd`, never to `/cmd_vel` directly — Phase 4 turns
-that into an enforced SROS2 access-control policy instead of just a
-convention.
+ever talk to `core/cmd`, never to `/cmd_vel` directly — as of Phase 4
+that's an enforced SROS2 access-control policy
+(`security/policies/policy.xml`), not just a convention: no perception
+enclave has a permission entry for `core/cmd`, `/cmd_vel`, or
+`face_indicator` at all. Every node also emits a structured JSON audit
+line per state transition (`*/audit.py`'s `audit_log()`), and
+`sim/record_audit_bag.sh` records the same topics via rosbag2.
 
 ## Repository layout
 
@@ -150,6 +157,8 @@ ROS 2 distro / Gazebo / turtlebot3 package names in
 `sim/docker/Dockerfile` are a best-effort, documented choice (see ADR
 0001) rather than a verified one — if a package name or launch file path
 is wrong, that's the first thing to check, and it should be a small fix.
+The Phase 4 SROS2 policy has the same caveat, in more detail, in
+`security/README.md`.
 
 ## Running Phase 2 (perception)
 
@@ -170,6 +179,18 @@ recorded dataset onto `camera/image_raw`, and an `interfaces/AudioChunk`
 publisher onto `audio_raw` — and watch `fused_emotion_state`:
 `docker compose exec sim ros2 topic echo fused_emotion_state`.
 
+## Running Phase 4 (SROS2)
+
+Off by default (`enable_security:=false`) — see `security/README.md`
+for the full walkthrough (generating the keystore, the `/test_cli`
+enclave for manual testing once security is on). Short version:
+
+```
+docker compose exec sim /workspace/security/generate_keystore.sh
+docker compose run --rm sim ros2 launch /workspace/launch/affectguard_sim.launch.py \
+    enable_security:=true
+```
+
 ### GUI over X11 (optional)
 
 Gazebo's client needs an X11 display. On Linux: `xhost +local:docker`,
@@ -184,7 +205,7 @@ container.
 | 1 | ROS 2 skeleton + Gazebo sim, stub policy engine | **done** |
 | 2 | Perception nodes (video + audio) -> `fused_emotion_state` | **done** (models not bundled, see `docs/models.md`) |
 | 3 | Real policy engine + enforced safety envelope | **done** (17/17 unit tests pass, see `tests/`) |
-| 4 | SROS2 + threat model + audit log | not started |
+| 4 | SROS2 + threat model + audit log | **done** (see `security/`, `docs/threat-model.md`) |
 | 5 (optional) | Raspberry Pi 5 / Jetson Orin Nano hardware port | not started |
 
 ## Author
