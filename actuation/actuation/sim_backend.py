@@ -13,10 +13,19 @@ policy nodes never touch actuation topics directly (NFR-4), they only
 ever publish to core/cmd, which this node translates for the concrete
 backend (simulation here, real hardware in the optional Phase 5
 backend).
+
+/cmd_vel is published as geometry_msgs/TwistStamped, not plain Twist:
+confirmed on a real run that turtlebot3_gazebo/ros_gz_bridge on Jazzy
+expects TwistStamped there (`ros2 topic echo /cmd_vel` reported two
+incompatible types on the topic until this was fixed - a real, verified
+fact now, not a guess). core/cmd itself still carries a plain
+geometry_msgs/Twist (see interfaces/msg/BehaviorCommand.msg) - wrapping
+it in a stamped header is exactly this translation layer's job, not a
+reason to change the internal policy<->actuation interface.
 """
 
 import rclpy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import TwistStamped
 from interfaces.msg import BehaviorCommand
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -40,17 +49,21 @@ class SimBackend(Node):
         cmd_vel_topic = self.get_parameter("cmd_vel_topic").get_parameter_value().string_value
         face_topic = self.get_parameter("face_topic").get_parameter_value().string_value
 
-        self._cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, 10)
+        self._cmd_vel_publisher = self.create_publisher(TwistStamped, cmd_vel_topic, 10)
         self._face_publisher = self.create_publisher(String, face_topic, 10)
         self._subscription = self.create_subscription(
             BehaviorCommand, input_topic, self._on_cmd, 10
         )
         self.get_logger().info(
-            f"sim_backend: '{input_topic}' -> '{cmd_vel_topic}' + '{face_topic}' (+ TTS log)"
+            f"sim_backend: '{input_topic}' -> '{cmd_vel_topic}' (TwistStamped) "
+            f"+ '{face_topic}' (+ TTS log)"
         )
 
     def _on_cmd(self, msg: BehaviorCommand) -> None:
-        self._cmd_vel_publisher.publish(msg.movement)
+        stamped = TwistStamped()
+        stamped.header.stamp = self.get_clock().now().to_msg()
+        stamped.twist = msg.movement
+        self._cmd_vel_publisher.publish(stamped)
 
         if msg.voice_text:
             self.get_logger().info(
