@@ -1,5 +1,7 @@
 # AffectGuard-HRI
 
+[![CI](https://github.com/oleg-vdv/affectguard-hri/actions/workflows/ci.yml/badge.svg)](https://github.com/oleg-vdv/affectguard-hri/actions/workflows/ci.yml)
+
 AffectGuard-HRI is a pet-project framework, built on ROS 2, for social/home
 robots that adapt their behavior to a person's detected emotional state
 (stress, cognitive load) while keeping a hard, non-negotiable safety
@@ -153,15 +155,24 @@ docker compose exec sim ros2 topic pub /current_task interfaces/msg/CurrentTask 
 docker compose exec sim ros2 topic echo /cmd_vel   # linear/angular stay at 0
 ```
 
-**Known limitation:** this was built and reviewed without a working
-Docker daemon / package-index access in the authoring environment, so
-`docker compose up` has not actually been executed end-to-end yet. The
-ROS 2 distro / Gazebo / turtlebot3 package names in
-`sim/docker/Dockerfile` are a best-effort, documented choice (see ADR
-0001) rather than a verified one — if a package name or launch file path
-is wrong, that's the first thing to check, and it should be a small fix.
-The Phase 4 SROS2 policy has the same caveat, in more detail, in
-`security/README.md`.
+**Known limitation:** this was authored without a working Docker daemon
+in the sandbox that wrote it, so `docker compose up`'s *runtime*
+behavior (Gazebo actually launching, the robot actually moving) has not
+been observed directly. The Docker *image itself* is verified, though:
+CI (`.github/workflows/ci.yml`'s `docker-build` job) actually builds
+`sim/docker/Dockerfile` on every push, and it's green — all the
+`ros-jazzy-turtlebot3*`/`ros-gz`/`sros2` apt package names, the pip
+perception dependencies, and the colcon build of all four ROS packages
+(interfaces/core/actuation/perception, including rosidl message
+generation) are confirmed to actually resolve and build, not just
+best-effort guesses (see ADR 0001 for the one real bug this caught and
+fixed: pip vs. the base image's debian-managed numpy). What's still
+unverified is Gazebo/turtlebot3 actually running inside that image and
+the launch file's node graph behaving as described — check CI's status
+badge or re-run `docker compose up --build` yourself for that.
+The Phase 4 SROS2 policy has a similar caveat, in more detail, in
+`security/README.md` — that part (`ros2 security create_permission`
+against `policy.xml`) isn't part of the `docker-build` CI job.
 
 ## Running Phase 2 (perception)
 

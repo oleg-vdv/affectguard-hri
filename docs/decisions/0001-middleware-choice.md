@@ -68,14 +68,20 @@ until 2029) with **Gazebo Harmonic**, because:
   default simulator land on the same choice — there's no classic-vs-new
   Gazebo decision left to make once Jazzy is picked.
 
-**Caveat:** this choice was made and documented without a working Docker
-daemon or package-index access in the environment that authored Phase 1,
-so the exact `ros-jazzy-turtlebot3*` apt package names in
-`sim/docker/Dockerfile` are a best-effort assumption based on the
-turtlebot3 project's usual naming convention, not a verified fact. If
-`docker compose up` surfaces a missing/renamed package, that's expected
-to be a small, mechanical fix rather than a sign the overall choice was
-wrong.
+**Caveat (partially resolved):** this choice was made and documented
+without a working Docker daemon in the environment that authored
+Phase 1, so the `ros-jazzy-turtlebot3*` apt package names in
+`sim/docker/Dockerfile` started as a best-effort assumption, not a
+verified fact. They're verified now: CI's `docker-build` job actually
+builds the image on every push (see `.github/workflows/ci.yml`), and
+all of them resolved correctly on the first real attempt. The one bug
+that *did* surface was unrelated to the package names — pip trying to
+uninstall the base image's debian-managed `numpy` while installing
+librosa, fixed with `--ignore-installed` — which is exactly the "small,
+mechanical fix" this ADR anticipated, just in a different spot than
+expected. What's still unverified is runtime behavior (Gazebo/
+turtlebot3 actually launching and moving the robot), since CI only
+builds the image, it doesn't run `docker compose up`.
 
 ## Consequences
 
