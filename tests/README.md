@@ -17,9 +17,14 @@ Run with `pytest tests/` from the repo root.
   rule engine proposed.
 - `test_rule_engine.py` (Phase 3) — the emotion-label -> stress-level
   -> behavior mapping, including the "unrecognized label" fallback.
+- `test_motor_drivers.py` (Phase 5) — the differential-drive kinematics
+  used by the optional real-hardware backend's gpiozero driver:
+  straight/rotation/stop cases and extreme-speed clamping. No
+  gpiozero/GPIO dependency, so it runs the same everywhere the other
+  three do.
 
-These three files are wired into CI (`.github/workflows/ci.yml`) since
-they have no ROS/onnxruntime/opencv dependency. Anything that does
+These four files are wired into CI (`.github/workflows/ci.yml`) since
+they have no ROS/onnxruntime/opencv/gpiozero dependency. Anything that does
 need a sourced ROS 2 workspace (rclpy, onnxruntime, ...) is exercised
 inside the Docker image instead, e.g.:
 

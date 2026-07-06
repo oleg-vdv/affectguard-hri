@@ -6,8 +6,12 @@
   <description>
     Actuation layer. sim_backend (Phase 1/3) takes the policy engine's
     BehaviorCommand from core/cmd and forwards movement to the
-    simulated robot's /cmd_vel, plus MVP voice/face stand-ins. A
-    real-hardware backend with the same topic interface is Phase 5.
+    simulated robot's /cmd_vel, plus MVP voice/face stand-ins.
+    hardware_backend (Phase 5, optional) implements the same core/cmd
+    interface for real motors via a pluggable MotorDriver (gpiozero
+    example provided; see docs/hardware.md). Neither backend is
+    required by the other - the launch file's `backend` argument picks
+    one.
   </description>
   <maintainer email="ipgleg@gmail.com">Oleg Vdovin</maintainer>
   <license>MIT</license>

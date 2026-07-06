@@ -98,13 +98,20 @@
     </enclave>
 
     <!--
-      sim_backend is the ONLY enclave allowed to publish /cmd_vel and
-      face_indicator. It may subscribe only to core/cmd - it has no
-      permission entry for fused_emotion_state, current_task, or either
-      perception emotion_state topic, so it cannot be driven by
-      anything except the policy engine's already-enveloped output.
+      /actuation_backend is the ONLY enclave allowed to publish
+      /cmd_vel and face_indicator. It may subscribe only to core/cmd -
+      it has no permission entry for fused_emotion_state, current_task,
+      or either perception emotion_state topic, so it cannot be driven
+      by anything except the policy engine's already-enveloped output.
+
+      Covers both actuation/ node implementations (sim_backend for
+      Gazebo, hardware_backend for Phase 5 real hardware) under one
+      enclave: the launch file's `backend` argument runs exactly one of
+      the two at a time (never both), and they need identical
+      permissions either way, so they share an identity rather than
+      needing two separate keys for mutually-exclusive nodes.
     -->
-    <enclave path="/sim_backend">
+    <enclave path="/actuation_backend">
       <profiles>
         <profile ns="/" node="sim_backend">
           <topics subscribe="ALLOW">
@@ -113,6 +120,17 @@
           </topics>
           <topics publish="ALLOW">
             <topic>/cmd_vel</topic>
+            <topic>face_indicator</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+        </profile>
+        <profile ns="/" node="hardware_backend">
+          <topics subscribe="ALLOW">
+            <topic>core/cmd</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics publish="ALLOW">
             <topic>face_indicator</topic>
             <topic>rosout</topic>
             <topic>parameter_events</topic>

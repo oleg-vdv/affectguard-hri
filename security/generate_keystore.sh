@@ -21,7 +21,7 @@ ENCLAVES=(
     "/perception/audio_emotion_node"
     "/perception/fusion_node"
     "/policy_engine"
-    "/sim_backend"
+    "/actuation_backend"
     "/test_cli"
 )
 

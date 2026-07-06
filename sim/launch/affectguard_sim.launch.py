@@ -24,6 +24,21 @@ Each node gets ROS_SECURITY_ENCLAVE_OVERRIDE set to its own enclave path
 from security/policies/policy.xml regardless, but ROS_SECURITY_ENABLE
 only turns SROS2 on when the launch argument is true, after running
 security/generate_keystore.sh - see ../../security/README.md.
+
+Phase 5 (optional, real hardware): `backend:=hardware` swaps
+actuation/sim_backend for actuation/hardware_backend and skips the
+Gazebo/turtlebot3 world entirely - this is the "same launch file works
+on real hardware" criterion from the roadmap (section 7), not a
+separate launch file. `hardware_backend` defaults to a log-only motor
+driver (see actuation/motor_drivers.py); pass `hardware_driver:=gpiozero`
+once you have a real chassis wired up, and tune pins/wheel_base_m/
+max_speed_mps via a ROS 2 parameters YAML file for that chassis (see
+docs/hardware.md - those aren't exposed as launch arguments since
+they're per-robot calibration constants, not run-to-run choices). Real
+camera/mic still come from whatever driver nodes publish on
+image_topic/audio_topic - same as Phase 2's simulated
+`enable_perception` path, since perception nodes never knew the
+difference between a real camera and a rosbag to begin with.
 """
 
 import os
@@ -35,7 +50,7 @@ from launch.actions import (
     IncludeLaunchDescription,
     SetEnvironmentVariable,
 )
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, LaunchConfigurationEquals
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -56,6 +71,8 @@ def generate_launch_description() -> LaunchDescription:
     enable_security = LaunchConfiguration("enable_security")
     security_keystore = LaunchConfiguration("security_keystore")
 
+    hardware_driver = LaunchConfiguration("hardware_driver")
+
     def sros2_env(enclave: str) -> dict:
         return {
             "ROS_SECURITY_ENABLE": enable_security,
@@ -75,11 +92,27 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument(
                 "security_keystore", default_value="/workspace/security/keystore"
             ),
+            DeclareLaunchArgument(
+                "backend",
+                default_value="sim",
+                description="'sim' (Gazebo/turtlebot3) or 'hardware' (Phase 5, real robot)",
+            ),
+            DeclareLaunchArgument(
+                "hardware_driver",
+                default_value="log",
+                description=(
+                    "'log' (default, no hardware) or 'gpiozero' (Raspberry Pi "
+                    "differential drive - tune pins/wheel_base_m/max_speed_mps "
+                    "via a ROS 2 parameters YAML file for your chassis, see "
+                    "docs/hardware.md)"
+                ),
+            ),
             SetEnvironmentVariable(
                 name="TURTLEBOT3_MODEL", value=os.environ.get("TURTLEBOT3_MODEL", "burger")
             ),
             IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(turtlebot3_world_launch)
+                PythonLaunchDescriptionSource(turtlebot3_world_launch),
+                condition=LaunchConfigurationEquals("backend", "sim"),
             ),
             Node(
                 package="core",
@@ -93,7 +126,17 @@ def generate_launch_description() -> LaunchDescription:
                 executable="sim_backend",
                 name="sim_backend",
                 output="screen",
-                additional_env=sros2_env("/sim_backend"),
+                condition=LaunchConfigurationEquals("backend", "sim"),
+                additional_env=sros2_env("/actuation_backend"),
+            ),
+            Node(
+                package="actuation",
+                executable="hardware_backend",
+                name="hardware_backend",
+                output="screen",
+                parameters=[{"driver": hardware_driver}],
+                condition=LaunchConfigurationEquals("backend", "hardware"),
+                additional_env=sros2_env("/actuation_backend"),
             ),
             Node(
                 package="perception",

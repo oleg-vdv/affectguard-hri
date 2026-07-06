@@ -18,10 +18,14 @@ one place to avoid the two drifting apart.
    any command the rules produce (e.g., max speed, no interrupting
    `critical`-tagged tasks), and this check cannot be bypassed by the
    rule layer itself.
-3. **Actuation** — Phase 1 ships the Gazebo sim backend
-   (`actuation/sim_backend`), which is the only node forwarding commands
-   to `/cmd_vel`. A real-hardware backend (Phase 5) implements the same
-   `core/cmd` -> device interface for Raspberry Pi 5 / Jetson Orin Nano.
+3. **Actuation** — Phase 1's Gazebo sim backend (`actuation/sim_backend`)
+   and Phase 5's optional real-hardware backend
+   (`actuation/hardware_backend`) share the same `core/cmd` ->
+   `BehaviorCommand` interface and the same launch file
+   (`backend:=sim`/`backend:=hardware`); exactly one is active at a
+   time. Movement on real hardware goes through a pluggable
+   `MotorDriver` (`actuation/motor_drivers.py`) since the spec doesn't
+   pin a specific chassis/motor controller — see `docs/hardware.md`.
 4. **Security** (Phase 4) — SROS2: X.509 certificates per node,
    encrypted DDS topic traffic between perception and policy engine,
    and access-control policies that make layer 1 -> layer 3 direct access
@@ -31,10 +35,10 @@ one place to avoid the two drifting apart.
    in structured JSON, plus `rosbag2` recording of the topics, so a full
    decision trace can be replayed and audited (FR-4).
 
-## Status (through Phase 4)
+## Status (through Phase 5)
 
-All 5 layers have real implementations (Phase 5 hardware is the only
-remaining, optional piece). `core/policy_engine` subscribes to
+All 5 layers have real implementations, including the optional Phase 5
+hardware backend. `core/policy_engine` subscribes to
 `fused_emotion_state` and `current_task`, runs
 `core/rule_engine.decide()` (a fused emotion label -> movement/voice/
 face proposal), and unconditionally passes the result through

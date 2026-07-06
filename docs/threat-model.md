@@ -22,7 +22,7 @@ LAN segment), without valid SROS2 credentials.
   `security/keystore/` cannot join the secured DDS domain at all, let
   alone subscribe to `camera/image_raw` or `audio_raw`.
 - Even with a stolen credential for an unrelated enclave (say,
-  `/sim_backend`), `security/policies/policy.xml` gives that enclave no
+  `/actuation_backend`), `security/policies/policy.xml` gives that enclave no
   `subscribe="ALLOW"` entry for either raw stream — only
   `video_emotion_node`'s and `audio_emotion_node`'s own enclaves can
   read them.

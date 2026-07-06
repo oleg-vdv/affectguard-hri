@@ -17,16 +17,19 @@ threat model, and an audit log of every state transition). Each is
 shipped incrementally: see the roadmap below for what exists today versus
 what's planned.
 
-This repository currently implements **Phases 1-4**: a ROS 2 skeleton
-running in Gazebo simulation, real video/audio emotion recognition nodes
-feeding a fusion node (`fused_emotion_state`), a rule-based policy
-engine with an immutable, unit-tested safety envelope that clamps or
-zeroes any movement command before it reaches actuation, an SROS2
-access-control policy that makes perception technically unable to reach
-actuation topics, and structured JSON audit logging of every state
-transition. See `docs/threat-model.md` for the three required threats
-and their mitigations. The optional hardware port (Phase 5) isn't done
-yet — see the roadmap.
+This repository currently implements **all phases, 1-5**: a ROS 2
+skeleton running in Gazebo simulation, real video/audio emotion
+recognition nodes feeding a fusion node (`fused_emotion_state`), a
+rule-based policy engine with an immutable, unit-tested safety envelope
+that clamps or zeroes any movement command before it reaches actuation,
+an SROS2 access-control policy that makes perception technically
+unable to reach actuation topics, structured JSON audit logging of
+every state transition, and an optional real-hardware actuation
+backend for Raspberry Pi 5 / Jetson Orin Nano behind the same
+`core/cmd` interface and the same launch file. See
+`docs/threat-model.md` for the three required threats and their
+mitigations, and `docs/hardware.md` for what Phase 5 does and doesn't
+assume about your chassis.
 
 ## Architecture (5 layers)
 
@@ -48,7 +51,7 @@ flowchart TB
         RULES --> ENVELOPE
     end
 
-    subgraph Actuation["3. Actuation layer (Phase 1: sim backend)"]
+    subgraph Actuation["3. Actuation layer (sim: Phase 1, hardware: Phase 5, optional)"]
         direction LR
         SIMBACK["sim_backend\n(Gazebo / turtlebot3)"]
         HWBACK["hardware backend\n(Phase 5, optional)"]
@@ -75,7 +78,7 @@ flowchart TB
     Actuation -. logs .-> Observability
 ```
 
-As of Phase 4: all 5 layers exist in a real form. `core/policy_engine`
+As of Phase 5: all 5 layers exist in a real form. `core/policy_engine`
 turns the fused emotion label into a movement/voice/face proposal
 (`core/rule_engine.py`), which then always passes through
 `core/safety_envelope.py` before publishing on `core/cmd` — there is no
@@ -101,10 +104,10 @@ affectguard-hri/
 ├── core/          # policy engine + safety envelope (Phase 3)
 ├── perception/     # emotion recognition nodes (Phase 2: video, audio, fusion)
 ├── interfaces/      # EmotionState / AudioChunk custom messages (ADR 0002)
-├── actuation/       # sim backend (Phase 1), hardware backend (Phase 5)
+├── actuation/       # sim backend (Phase 1), hardware backend (Phase 5, optional)
 ├── security/        # SROS2 keystore/policies (Phase 4)
 ├── sim/             # Gazebo launch file, Dockerfile
-├── docs/            # architecture, threat model, ADRs, models.md
+├── docs/            # architecture, threat model, ADRs, models.md, hardware.md
 ├── tests/
 ├── .github/workflows/
 ├── docker-compose.yml
@@ -198,6 +201,28 @@ then uncomment the `DISPLAY` environment/volume lines in
 `docker-compose.yml`. Without it, Gazebo still runs headless inside the
 container.
 
+## Running Phase 5 (optional real hardware)
+
+Same launch file, different `backend` argument — no separate launch
+file, per the roadmap's own Phase 5 criterion. Run this on the robot's
+own ROS 2 install (colcon workspace) rather than inside the Docker
+image built for Gazebo, since GPIO access is simplest from the host:
+
+```
+ros2 launch sim/launch/affectguard_sim.launch.py backend:=hardware
+```
+
+Defaults to a log-only motor driver (safe anywhere, moves nothing).
+For an actual Raspberry Pi differential-drive chassis:
+`backend:=hardware hardware_driver:=gpiozero`, with pin numbers/
+wheel base/top speed set via a ROS 2 parameters YAML file (these are
+per-robot calibration constants, not launch arguments — see
+`docs/hardware.md`). Jetson Orin Nano needs its own `MotorDriver`
+subclass (`actuation/motor_drivers.py`) since `gpiozero` is
+Raspberry-Pi-specific — also covered in `docs/hardware.md`, along with
+what is and isn't verified here (there's no physical robot in the
+environment that wrote this).
+
 ## Roadmap
 
 | Phase | Content | Status |
@@ -206,7 +231,7 @@ container.
 | 2 | Perception nodes (video + audio) -> `fused_emotion_state` | **done** (models not bundled, see `docs/models.md`) |
 | 3 | Real policy engine + enforced safety envelope | **done** (17/17 unit tests pass, see `tests/`) |
 | 4 | SROS2 + threat model + audit log | **done** (see `security/`, `docs/threat-model.md`) |
-| 5 (optional) | Raspberry Pi 5 / Jetson Orin Nano hardware port | not started |
+| 5 (optional) | Raspberry Pi 5 / Jetson Orin Nano hardware port | **done** (log-only + gpiozero reference driver; see `docs/hardware.md`) |
 
 ## Author
 

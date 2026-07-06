@@ -14,12 +14,16 @@ setup(
     zip_safe=True,
     maintainer="Oleg Vdovin",
     maintainer_email="ipgleg@gmail.com",
-    description="Actuation layer. Phase 1: Gazebo sim backend bridging core/cmd to /cmd_vel.",
+    description=(
+        "Actuation layer: Gazebo sim backend (Phase 1) and optional "
+        "real-hardware backend (Phase 5), same core/cmd interface."
+    ),
     license="MIT",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
             "sim_backend = actuation.sim_backend:main",
+            "hardware_backend = actuation.hardware_backend:main",
         ],
     },
 )
