@@ -142,6 +142,10 @@ container.
 | 4 | SROS2 + threat model + audit log | not started |
 | 5 (optional) | Raspberry Pi 5 / Jetson Orin Nano hardware port | not started |
 
+## Author
+
+Oleg Vdovin (Вдовин Олег)
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

@@ -8,7 +8,7 @@
     AffectGuard-HRI. Phase 1 contains a stub node only: no emotion input
     yet, no safety envelope yet (see roadmap phases 2-3).
   </description>
-  <maintainer email="ipgleg@gmail.com">AffectGuard-HRI maintainers</maintainer>
+  <maintainer email="ipgleg@gmail.com">Oleg Vdovin</maintainer>
   <license>MIT</license>
 
   <depend>rclpy</depend>

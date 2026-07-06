@@ -9,7 +9,7 @@
     forwards it to the simulated robot's `/cmd_vel`. A real-hardware
     backend with the same topic interface is planned for Phase 5.
   </description>
-  <maintainer email="ipgleg@gmail.com">AffectGuard-HRI maintainers</maintainer>
+  <maintainer email="ipgleg@gmail.com">Oleg Vdovin</maintainer>
   <license>MIT</license>
 
   <depend>rclpy</depend>

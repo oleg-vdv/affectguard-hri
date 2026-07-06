@@ -12,7 +12,7 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="AffectGuard-HRI maintainers",
+    maintainer="Oleg Vdovin",
     maintainer_email="ipgleg@gmail.com",
     description=(
         "Policy engine (cognitive/arbitration layer) and safety envelope. "
