@@ -2,6 +2,14 @@
 
 [![CI](https://github.com/oleg-vdv/affectguard-hri/actions/workflows/ci.yml/badge.svg)](https://github.com/oleg-vdv/affectguard-hri/actions/workflows/ci.yml)
 
+![Live demo: emotion -> policy -> safety envelope](docs/demo.gif)
+
+*Live run on a headless server: publishing an "anger" emotion drops the
+robot's speed (0.15 → 0.045) and switches its face to "concerned";
+flagging the current task `critical` makes the safety envelope force
+movement to 0.0, overriding the rule engine. See "Running Phase 1 + 3"
+below for how to reproduce it.*
+
 AffectGuard-HRI is a pet-project framework, built on ROS 2, for social/home
 robots that adapt their behavior to a person's detected emotional state
 (stress, cognitive load) while keeping a hard, non-negotiable safety
