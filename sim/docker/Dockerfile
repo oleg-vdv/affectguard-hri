@@ -21,15 +21,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-jazzy-turtlebot3-simulations \
         ros-jazzy-turtlebot3-msgs \
         ros-jazzy-ros-gz \
+        ros-jazzy-cv-bridge \
         python3-colcon-common-extensions \
+        python3-pip \
         ros-jazzy-rmw-cyclonedds-cpp \
     && rm -rf /var/lib/apt/lists/*
 
 ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
+# Phase 2 perception dependencies. Not resolvable via rosdep/apt as ROS
+# packages, so installed via pip - see docs/models.md for the models
+# these actually run.
+RUN pip install --no-cache-dir --break-system-packages \
+        onnxruntime \
+        opencv-python-headless \
+        librosa
+
 WORKDIR /workspace
+COPY interfaces/ src/interfaces/
 COPY core/ src/core/
 COPY actuation/ src/actuation/
+COPY perception/ src/perception/
 COPY sim/launch/ launch/
 
 RUN . /opt/ros/jazzy/setup.sh \

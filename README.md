@@ -17,11 +17,13 @@ threat model, and an audit log of every state transition). Each is
 shipped incrementally: see the roadmap below for what exists today versus
 what's planned.
 
-This repository currently implements **Phase 1 only**: a ROS 2 skeleton
-running in Gazebo simulation, with a placeholder policy engine node and a
-sim actuation backend, wired together end-to-end. There is no emotion
-recognition, no rule engine, no safety envelope enforcement, and no
-SROS2 yet — those are Phases 2 through 4.
+This repository currently implements **Phases 1-2**: a ROS 2 skeleton
+running in Gazebo simulation (placeholder policy engine + sim actuation
+backend, wired end-to-end), plus real video/audio emotion recognition
+nodes and a fusion node publishing `fused_emotion_state`. The policy
+engine is still the Phase 1 stub — it does not yet consume
+`fused_emotion_state`, there is no rule engine, no safety envelope
+enforcement, and no SROS2 yet. Those are Phases 3 and 4.
 
 ## Architecture (5 layers)
 
@@ -70,14 +72,15 @@ flowchart TB
     Actuation -. logs .-> Observability
 ```
 
-Today (Phase 1), only layers 3 and 5 exist in a real form, and layer 2 is
-a stub: `core/policy_engine_stub` publishes a fixed forward-drive command
-on a timer (no emotion input, no rules, no envelope yet), and
-`actuation/sim_backend` forwards it to the simulated robot's `/cmd_vel`.
-This still establishes the real topic boundary the later phases build
-on: perception and policy nodes only ever talk to `core/cmd`, never to
-`/cmd_vel` directly — that separation is what NFR-4 turns into an
-enforced SROS2 access-control policy in Phase 4, not just a convention.
+As of Phase 2: layers 1, 3 and 5 exist in a real form. Layer 2 is still
+the Phase 1 stub — `core/policy_engine_stub` publishes a fixed
+forward-drive command on a timer, not yet wired to
+`fused_emotion_state` — and `actuation/sim_backend` forwards it to the
+simulated robot's `/cmd_vel`. This still establishes the real topic
+boundary the later phases build on: perception and policy nodes only
+ever talk to `core/cmd`, never to `/cmd_vel` directly — that separation
+is what NFR-4 turns into an enforced SROS2 access-control policy in
+Phase 4, not just a convention.
 
 ## Repository layout
 
@@ -88,11 +91,12 @@ rationale. Folders not yet populated with real code carry a short
 ```
 affectguard-hri/
 ├── core/          # policy engine (Phase 1: stub node only)
-├── perception/     # emotion recognition nodes (Phase 2)
+├── perception/     # emotion recognition nodes (Phase 2: video, audio, fusion)
+├── interfaces/      # EmotionState / AudioChunk custom messages (ADR 0002)
 ├── actuation/       # sim backend (Phase 1), hardware backend (Phase 5)
 ├── security/        # SROS2 keystore/policies (Phase 4)
 ├── sim/             # Gazebo launch file, Dockerfile
-├── docs/            # architecture, threat model, ADRs
+├── docs/            # architecture, threat model, ADRs, models.md
 ├── tests/
 ├── .github/workflows/
 ├── docker-compose.yml
@@ -125,6 +129,25 @@ ROS 2 distro / Gazebo / turtlebot3 package names in
 0001) rather than a verified one — if a package name or launch file path
 is wrong, that's the first thing to check, and it should be a small fix.
 
+## Running Phase 2 (perception)
+
+Perception nodes are **off by default** in the launch file — the
+default turtlebot3 model has no camera and there's no bundled
+microphone source in sim, and both nodes refuse to start without a
+real ONNX model file (see `docs/models.md`). With models in hand:
+
+```
+docker compose run --rm sim ros2 launch /workspace/launch/affectguard_sim.launch.py \
+    enable_perception:=true \
+    video_model_path:=/path/to/emotion-ferplus.onnx \
+    audio_model_path:=/path/to/speech-emotion.onnx
+```
+
+Then feed it real data — a camera driver node or `ros2 bag play` of a
+recorded dataset onto `camera/image_raw`, and an `interfaces/AudioChunk`
+publisher onto `audio_raw` — and watch `fused_emotion_state`:
+`docker compose exec sim ros2 topic echo fused_emotion_state`.
+
 ### GUI over X11 (optional)
 
 Gazebo's client needs an X11 display. On Linux: `xhost +local:docker`,
@@ -136,8 +159,8 @@ container.
 
 | Phase | Content | Status |
 |---|---|---|
-| 1 | ROS 2 skeleton + Gazebo sim, stub policy engine | **this repo, done** |
-| 2 | Perception nodes (video + audio) -> `fused_emotion_state` | not started |
+| 1 | ROS 2 skeleton + Gazebo sim, stub policy engine | **done** |
+| 2 | Perception nodes (video + audio) -> `fused_emotion_state` | **done** (models not bundled, see `docs/models.md`) |
 | 3 | Real policy engine + enforced safety envelope | not started |
 | 4 | SROS2 + threat model + audit log | not started |
 | 5 (optional) | Raspberry Pi 5 / Jetson Orin Nano hardware port | not started |

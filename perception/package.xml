@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>perception</name>
+  <version>0.1.0</version>
+  <description>
+    Phase 2: video and audio emotion recognition nodes plus a
+    confidence-weighted fusion node publishing fused_emotion_state
+    (FR-1). No access to actuation topics/services (NFR-4).
+  </description>
+  <maintainer email="ipgleg@gmail.com">Oleg Vdovin</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>interfaces</depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

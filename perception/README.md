@@ -1,7 +1,11 @@
 # perception/
 
-Reserved for Phase 2 (see repo root README and the ТЗ roadmap, section 7):
-video-based emotion recognition, speech emotion recognition, and the
-fusion node that publishes `fused_emotion_state`.
+Phase 2: `video_emotion_node`, `audio_emotion_node`, `fusion_node` ->
+`fused_emotion_state`. See `docs/models.md` for the ONNX models these
+nodes expect (not bundled), and `perception/perception/fusion_logic.py`
++ `tests/test_fusion_logic.py` for the fusion arbitration rule and its
+test coverage.
 
-Not implemented in Phase 1.
+No access to actuation topics/services — publishes only emotion state
+(NFR-4). This is a code-level convention until Phase 4 turns it into an
+enforced SROS2 access-control policy.
