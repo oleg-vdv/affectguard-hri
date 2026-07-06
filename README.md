@@ -19,11 +19,13 @@ threat model, and an audit log of every state transition). Each is
 shipped incrementally: see the roadmap below for what exists today versus
 what's planned.
 
-This repository currently implements **all phases, 1-5**: a ROS 2
-skeleton running in Gazebo simulation, real video/audio emotion
-recognition nodes feeding a fusion node (`fused_emotion_state`), a
-rule-based policy engine with an immutable, unit-tested safety envelope
-that clamps or zeroes any movement command before it reaches actuation,
+This repository currently implements **all phases, 1-5**, and the core
+loop is verified running end-to-end on a headless server (see "Running
+Phase 1 + 3" below): a ROS 2 skeleton running in Gazebo simulation,
+real video/audio emotion recognition nodes feeding a fusion node
+(`fused_emotion_state`), a rule-based policy engine with an immutable,
+unit-tested safety envelope that clamps or zeroes any movement command
+before it reaches actuation,
 an SROS2 access-control policy that makes perception technically
 unable to reach actuation topics, structured JSON audit logging of
 every state transition, and an optional real-hardware actuation
@@ -134,46 +136,59 @@ runs `sim/launch/affectguard_sim.launch.py`, which brings up:
    (plus logging voice_text and publishing face_pattern on
    `face_indicator`).
 
-Expected result: the robot drives forward in Gazebo at the "calm" speed.
-To check without a GUI: `docker compose exec sim ros-env-exec ros2 topic echo /cmd_vel`
-(`docker compose exec` bypasses the image's ROS-sourcing ENTRYPOINT,
-so plain `ros2 ...` fails with "executable file not found" without the
-`ros-env-exec` wrapper — see `sim/docker/ros_env_exec.sh`).
+Expected result: the robot drives forward in Gazebo at the "calm"
+speed. Every node also logs one structured JSON line per state
+transition (FR-4), and those logs are the most reliable way to watch
+the pipeline — `docker compose logs sim -f | grep policy_engine` shows
+the live `policy_decision` stream. In the calm/idle state each line
+reads `"fused_label": "neutral" ... "enforced_linear_x": 0.15`.
 
-To see the policy engine actually react, publish a fused emotion state
-by hand and watch `core/cmd` change:
+(Note: ad-hoc `docker compose exec sim ros-env-exec ros2 topic echo ...`
+also works, but each exec is a fresh DDS participant that has to
+re-discover the graph, so it can be flaky/slow to attach on the first
+try — the JSON logs above avoid that entirely. The `ros-env-exec`
+wrapper is needed because `docker compose exec` bypasses the image's
+ROS-sourcing ENTRYPOINT; see `sim/docker/ros_env_exec.sh`.)
+
+To see the policy engine **react to emotion**, publish a fused emotion
+state for a few seconds (a resident publisher, so DDS discovery
+completes and the message actually reaches the node) and watch the
+log:
 
 ```
-docker compose exec sim ros-env-exec ros2 topic pub /fused_emotion_state interfaces/msg/EmotionState \
-    "{label: 'anger', confidence: 0.9}" --once
-docker compose exec sim ros-env-exec ros2 topic echo /core/cmd
+docker compose exec sim ros-env-exec bash -c \
+  "timeout 8 ros2 topic pub /fused_emotion_state interfaces/msg/EmotionState '{label: anger, confidence: 0.9}' -r 2"
+docker compose logs sim --tail 4 | grep policy_engine
 ```
 
-And to see the safety envelope refuse to let *anything* move the robot
-during a critical task:
+The log now shows `"fused_label": "anger" ... "enforced_linear_x":
+0.045` (0.15 × 0.3 for high stress) and `"face_pattern": "concerned"`.
+
+And to see the **safety envelope** refuse to let anything move the
+robot during a critical task:
 
 ```
-docker compose exec sim ros-env-exec ros2 topic pub /current_task interfaces/msg/CurrentTask \
-    "{task_id: 'demo', critical: true}" --once
-docker compose exec sim ros-env-exec ros2 topic echo /cmd_vel   # linear/angular stay at 0
+docker compose exec sim ros-env-exec bash -c \
+  "timeout 8 ros2 topic pub /current_task interfaces/msg/CurrentTask '{task_id: demo, critical: true}' -r 2"
+docker compose logs sim --tail 4 | grep policy_engine
 ```
 
-**Known limitation:** this was authored without a working Docker daemon
-in the sandbox that wrote it, so `docker compose up`'s *runtime*
-behavior (Gazebo actually launching, the robot actually moving) has not
-been observed directly. The Docker *image itself* is verified, though:
-CI (`.github/workflows/ci.yml`'s `docker-build` job) actually builds
-`sim/docker/Dockerfile` on every push, and it's green — all the
-`ros-jazzy-turtlebot3*`/`ros-gz`/`sros2` apt package names, the pip
-perception dependencies, and the colcon build of all four ROS packages
-(interfaces/core/actuation/perception, including rosidl message
-generation) are confirmed to actually resolve and build, not just
-best-effort guesses (see ADR 0001 for the one real bug this caught and
-fixed: pip vs. the base image's debian-managed numpy). What's still
-unverified is Gazebo/turtlebot3 actually running inside that image and
-the launch file's node graph behaving as described — check CI's status
-badge or re-run `docker compose up --build` yourself for that.
-The Phase 4 SROS2 policy has a similar caveat, in more detail, in
+The log shows `"task_critical": true, "proposed_linear_x": 0.045,
+"enforced_linear_x": 0.0` — the rule engine still proposed movement,
+but the envelope forced it to zero, regardless of the emotion.
+
+**Verified end-to-end.** All three transitions above were run live on a
+headless Ubuntu 24.04 server (`docker compose up --build`, no GUI):
+calm → 0.15, `anger` → 0.045, and `critical` task → 0.0 all reproduced
+exactly as described, and Gazebo/turtlebot3 came up (its `/scan`,
+`/odom`, `/tf`, `/imu`, `/cmd_vel` topics are all present). CI's
+`docker-build` job additionally rebuilds the image on every push, so
+the apt/pip/colcon build stays verified continuously. Three real bugs
+were found and fixed by actually running it — see git history: pip vs.
+the base image's debian-managed numpy, `/cmd_vel` needing
+`TwistStamped` rather than plain `Twist` on Jazzy, and `xvfb-run`
+hanging on a headless host (Xvfb is now started directly). The Phase 4
+SROS2 path is the one part not yet exercised on real hardware — see
 `security/README.md` — that part (`ros2 security create_permission`
 against `policy.xml`) isn't part of the `docker-build` CI job.
 
@@ -248,9 +263,9 @@ environment that wrote this).
 
 | Phase | Content | Status |
 |---|---|---|
-| 1 | ROS 2 skeleton + Gazebo sim, stub policy engine | **done** |
+| 1 | ROS 2 skeleton + Gazebo sim, stub policy engine | **done, verified live** (robot drives in Gazebo on a headless server) |
 | 2 | Perception nodes (video + audio) -> `fused_emotion_state` | **done** (models not bundled, see `docs/models.md`) |
-| 3 | Real policy engine + enforced safety envelope | **done** (17/17 unit tests pass, see `tests/`) |
+| 3 | Real policy engine + enforced safety envelope | **done, verified live** (17/17 unit tests + end-to-end emotion→speed→envelope run) |
 | 4 | SROS2 + threat model + audit log | **done** (see `security/`, `docs/threat-model.md`) |
 | 5 (optional) | Raspberry Pi 5 / Jetson Orin Nano hardware port | **done** (log-only + gpiozero reference driver; see `docs/hardware.md`) |
 

@@ -1,19 +1,19 @@
-# Brings up the full Phase 1 stack with a single command:
+# Brings up the full stack with a single command:
 #   docker compose up --build
 #
 # What happens: builds the sim image (ROS 2 Jazzy + Gazebo Harmonic +
 # turtlebot3), then runs sim/launch/affectguard_sim.launch.py inside it,
-# which starts Gazebo with a turtlebot3, the core/ policy_engine_stub
-# node, and the actuation/ sim_backend node. The stub publishes a
-# constant forward-drive command on a timer; sim_backend forwards it to
-# /cmd_vel, so the robot should visibly move forward once everything is
-# up.
+# which starts Gazebo with a turtlebot3, the core/ policy_engine node,
+# and the actuation/ sim_backend node. policy_engine publishes a
+# BehaviorCommand on core/cmd; sim_backend forwards its movement to
+# /cmd_vel (as TwistStamped), so the robot drives forward once
+# everything is up. Verified end-to-end on a headless server - see the
+# README's "Running Phase 1 + 3" section.
 #
-# GUI: Gazebo's client GUI needs an X11 display. On Linux with X11,
-# uncomment the `environment`/`volumes` DISPLAY lines below and run
-# `xhost +local:docker` first. Without that, Gazebo still runs headless
-# (server-only) inside the container, which is enough to verify the
-# stack via `docker compose exec sim ros2 topic echo /cmd_vel`.
+# GUI: not required. On a headless host the entrypoint runs Gazebo under
+# a virtual display (Xvfb) automatically. For a real GUI on a Linux X11
+# host, uncomment the `environment`/`volumes` DISPLAY lines below and
+# run `xhost +local:docker` first.
 services:
   sim:
     build:
