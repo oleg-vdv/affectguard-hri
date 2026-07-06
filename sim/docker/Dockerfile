@@ -34,8 +34,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Phase 2 perception dependencies. Not resolvable via rosdep/apt as ROS
 # packages, so installed via pip - see docs/models.md for the models
-# these actually run.
-RUN pip install --no-cache-dir --break-system-packages \
+# these actually run. --ignore-installed is required because the base
+# image's numpy is a debian-managed package with no pip RECORD file,
+# which librosa's dependency chain otherwise tries (and fails) to
+# uninstall (confirmed by an actual CI run - see git history for this
+# line).
+RUN pip install --no-cache-dir --break-system-packages --ignore-installed \
         onnxruntime \
         opencv-python-headless \
         librosa
