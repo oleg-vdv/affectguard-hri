@@ -7,9 +7,9 @@ test coverage (runnable without ROS/rclpy installed).
 """
 
 import rclpy
-from interfaces.msg import EmotionState
 from rclpy.node import Node
 
+from interfaces.msg import EmotionState
 from perception.audit import audit_log
 from perception.fusion_logic import Reading, fuse
 
@@ -74,7 +74,7 @@ class FusionNode(Node):
             )
 
 
-def main(args: list = None) -> None:
+def main(args: list | None = None) -> None:
     rclpy.init(args=args)
     node = FusionNode()
     try:

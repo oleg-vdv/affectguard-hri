@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
 
-from core.safety_envelope import (  # noqa: E402
+from core.safety_envelope import (
     MAX_ANGULAR_SPEED,
     MAX_LINEAR_SPEED,
     Movement,

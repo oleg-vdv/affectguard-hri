@@ -13,7 +13,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      # Pinned: ruff expands its default rule set between releases, so an
+      # unpinned install turns an unchanged codebase red without a commit.
+      - run: pip install ruff==0.16.5
       - run: ruff check .
 
   unit-tests:

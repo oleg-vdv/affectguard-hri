@@ -21,10 +21,10 @@ import numpy as np
 import onnxruntime as ort
 import rclpy
 from cv_bridge import CvBridge
-from interfaces.msg import EmotionState
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
+from interfaces.msg import EmotionState
 from perception.audit import audit_log
 from perception.logits import argmax_label, softmax
 
@@ -106,7 +106,7 @@ class VideoEmotionNode(Node):
         )
 
 
-def main(args: list = None) -> None:
+def main(args: list | None = None) -> None:
     rclpy.init(args=args)
     node = VideoEmotionNode()
     try:

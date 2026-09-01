@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "perception"))
 
-from perception.fusion_logic import Reading, fuse  # noqa: E402
+from perception.fusion_logic import Reading, fuse
 
 
 def test_both_fresh_agree_averages_confidence():

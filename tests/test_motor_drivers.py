@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "actuation"))
 
-from actuation.motor_drivers import differential_drive_wheel_power  # noqa: E402
+from actuation.motor_drivers import differential_drive_wheel_power
 
 
 def test_straight_forward_drives_both_wheels_equally():

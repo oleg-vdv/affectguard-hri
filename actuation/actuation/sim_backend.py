@@ -26,11 +26,11 @@ reason to change the internal policy<->actuation interface.
 
 import rclpy
 from geometry_msgs.msg import TwistStamped
-from interfaces.msg import BehaviorCommand
 from rclpy.node import Node
 from std_msgs.msg import String
 
 from actuation.audit import audit_log
+from interfaces.msg import BehaviorCommand
 
 DEFAULT_INPUT_TOPIC = "core/cmd"
 DEFAULT_CMD_VEL_TOPIC = "/cmd_vel"
@@ -84,7 +84,7 @@ class SimBackend(Node):
         )
 
 
-def main(args: list = None) -> None:
+def main(args: list | None = None) -> None:
     rclpy.init(args=args)
     node = SimBackend()
     try:

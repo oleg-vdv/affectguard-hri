@@ -19,9 +19,9 @@ import librosa
 import numpy as np
 import onnxruntime as ort
 import rclpy
-from interfaces.msg import AudioChunk, EmotionState
 from rclpy.node import Node
 
+from interfaces.msg import AudioChunk, EmotionState
 from perception.audit import audit_log
 from perception.logits import argmax_label, softmax
 
@@ -128,7 +128,7 @@ class AudioEmotionNode(Node):
         )
 
 
-def main(args: list = None) -> None:
+def main(args: list | None = None) -> None:
     rclpy.init(args=args)
     node = AudioEmotionNode()
     try:

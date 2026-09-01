@@ -15,12 +15,12 @@ work).
 """
 
 import rclpy
-from interfaces.msg import BehaviorCommand
 from rclpy.node import Node
 from std_msgs.msg import String
 
 from actuation.audit import audit_log
 from actuation.motor_drivers import GPIODifferentialDriveMotorDriver, LoggingMotorDriver
+from interfaces.msg import BehaviorCommand
 
 DEFAULT_INPUT_TOPIC = "core/cmd"
 DEFAULT_FACE_TOPIC = "face_indicator"
@@ -110,7 +110,7 @@ class HardwareBackend(Node):
         )
 
 
-def main(args: list = None) -> None:
+def main(args: list | None = None) -> None:
     rclpy.init(args=args)
     node = HardwareBackend()
     try:

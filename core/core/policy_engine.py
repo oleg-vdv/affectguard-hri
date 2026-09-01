@@ -9,12 +9,12 @@ publishes a movement command without going through enforce() first.
 """
 
 import rclpy
-from interfaces.msg import BehaviorCommand, CurrentTask, EmotionState
 from rclpy.node import Node
 
 from core.audit import audit_log
 from core.rule_engine import decide
 from core.safety_envelope import Movement, enforce
+from interfaces.msg import BehaviorCommand, CurrentTask, EmotionState
 
 DEFAULT_PERIOD_SEC = 0.5
 
@@ -82,7 +82,7 @@ class PolicyEngine(Node):
         )
 
 
-def main(args: list = None) -> None:
+def main(args: list | None = None) -> None:
     rclpy.init(args=args)
     node = PolicyEngine()
     try:

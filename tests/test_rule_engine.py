@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
 
-from core.rule_engine import BASE_LINEAR_SPEED, decide, stress_level  # noqa: E402
+from core.rule_engine import BASE_LINEAR_SPEED, decide, stress_level
 
 
 def test_calm_labels_map_to_low_stress():

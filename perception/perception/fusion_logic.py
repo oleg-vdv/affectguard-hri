@@ -7,7 +7,6 @@ tests/test_fusion_logic.py).
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -17,18 +16,18 @@ class Reading:
     stamp_sec: float
 
 
-def _is_fresh(reading: Optional[Reading], now_sec: float, max_age_sec: float) -> bool:
+def _is_fresh(reading: Reading | None, now_sec: float, max_age_sec: float) -> bool:
     if reading is None:
         return False
     return (now_sec - reading.stamp_sec) <= max_age_sec
 
 
 def fuse(
-    video: Optional[Reading],
-    audio: Optional[Reading],
+    video: Reading | None,
+    audio: Reading | None,
     now_sec: float,
     max_age_sec: float = 2.0,
-) -> Optional[Reading]:
+) -> Reading | None:
     """Combine the latest video/audio readings with a simple confidence rule.
 
     - Stale or missing modalities (older than max_age_sec) are dropped.
